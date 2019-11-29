@@ -10,7 +10,7 @@ using namespace std;
 using namespace NConcurrentArithmetics::NExpressionParser;
 
 int main() {
-	string str = " sum(data1, comp(data2, data1)),,";
+	string str = " comp(sum(data32),\n sum(data1,  comp(data1, data1))),,";
 	auto tree = Parse(str);
 	cout << "Nodes:\n";
 	for (size_t i = 0; i < tree.Nodes_.size(); i++) {

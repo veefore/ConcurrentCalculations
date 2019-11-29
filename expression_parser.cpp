@@ -8,6 +8,7 @@
 #include <vector>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <functional>
 #include <set>
 #include <iostream>
@@ -17,13 +18,9 @@ namespace NConcurrentArithmetics::NExpressionParser {
 	size_t MIN_DATA_ARGUMENT_SIZE = 5;
 
 	TRawTree<std::string_view> Parse(const std::string& expression) {
-		std::cout << "I'm in parse" << std::endl;
 		Ensure(NPrivate::CorrectParenthesesSequence(expression));
-		std::cout << "I'm about to build" << std::endl;
 		NPrivate::TUnconvertedTreeBuilder builder(expression);
-		std::cout << "I'm about to optimize" << std::endl;
 		builder.Optimize();
-		std::cout << "I'm returning" << std::endl;
 		return builder.ExtractTree();
 	}
 
@@ -61,42 +58,31 @@ namespace NConcurrentArithmetics::NExpressionParser {
 			// that is the lowest in the tree.
 		}
 
-		size_t TUnconvertedTreeBuilder::Initialize(std::string_view untrimmedExpression) {
-			std::cout << "Initiailizing from " << untrimmedExpression << std::endl;
-			std::string_view expression = NPrivate::Trim(untrimmedExpression);
-			std::cout << "Trimmed expression is: " << expression << std::endl;
+		size_t TUnconvertedTreeBuilder::Initialize(std::string_view expression) {
+			NPrivate::Trim(expression);
 
 			Tree_.Nodes_.push_back(expression);
-			std::cout << "Successfully emplaced a node" << std::endl;
 			Tree_.Edges_.emplace_back();
-			std::cout << "Successfully emplaced an edge vector" << std::endl;
 			size_t currentNode = Tree_.Nodes_.size() - 1;
 			std::vector<size_t>& children = Tree_.Edges_[currentNode];
 
-			std::cout << "About to be looking for pars" << std::endl;
-			size_t argsStart = expression.find_first_of('(');
-			std::cout << "argsStart: " << argsStart << std::endl;
-			if (argsStart == expression.npos) {
-				std::cout << "Ensuring valid data argment" << std::endl;
+			size_t openBracket = expression.find_first_of('(');
+			if (openBracket == expression.npos) {
 				Ensure(NPrivate::ValidDataArgument(expression));
 			} else {
-				size_t argsEnd = NPrivate::FindClosingBracket(expression, argsStart);
-				size_t argsLength = argsEnd - argsStart - 1;
-				Ensure(argsLength > 0);
+				// Expression at this point is expected to have format "expr(...)".
+				expression.remove_suffix(1);
+				expression.remove_prefix(openBracket + 1);
 
-				size_t start = argsStart + 1;
-				for (size_t end = NPrivate::FindArgumentEnd(expression, start, expression.size() - 1);
-					 end != expression.npos;
-					 start = end + 1, end = NPrivate::FindArgumentEnd(expression, start, expression.size() - 1)) {
-					std::cout << "start & end: " << start << " " << end << std::endl;
-					children.push_back(Initialize(expression.substr(start, end - start + 1)));
-					std::cout << "Children back is: " << children.back() << std::endl;
+				size_t start = 0;
+				for (size_t end = NPrivate::FindArgumentEnd(expression, start);
+					 start < expression.size();
+					 start = end + 1, end = NPrivate::FindArgumentEnd(expression, start)) {
+					size_t justInit = Initialize(expression.substr(start, end - start + 1));
+					Tree_.Edges_[currentNode].push_back(justInit);
 				}
-				children.push_back(Initialize(expression.substr(start, expression.size() - start)));
-				std::cout << "Children back is: " << children.back() << std::endl;
 			}
 
-			std::cout << "Initialized: " << currentNode << std::endl;
 			return currentNode;
 		}
 
@@ -120,55 +106,27 @@ namespace NConcurrentArithmetics::NExpressionParser {
 			return state == 0;
 		}
 
-		size_t FindClosingBracket(std::string_view expression, size_t startPosition) {
-			int state = 0;
-			for (size_t i = startPosition; i < expression.size(); i++) {
-				if (expression[i] == '(') {
-					state++;
-				} else if (expression[i] == ')') {
-					state--;
-				}
-				if (i > startPosition && state == 0) {
-					return i;
-				}
-			}
-			return expression.npos;
-		}
-
-		bool isTrimable(char c) {
-			return (c == ' ' || c == '\n' || c == ',');
-		}
-
-		std::string_view Trim(std::string_view expression) {
-			std::cout << "Trimming " << expression << std::endl;
-			std::cout << "trimable broke" << std::endl;
+		std::string_view Trim(std::string_view& expression) {
+			std::unordered_set<char> trimable = {' ', '\n', ','};
 			size_t start = 0;
-			std::cout << "Something wrong with expression.size()?" << std::endl;
 			size_t end = expression.size() - 1;
 
-			std::cout << "Entering first while" << std::endl;
-			while (start < end && isTrimable(expression[start]))
+			while (start < end && (trimable.find(expression[start]) != trimable.end()))
 				start++;
-			std::cout << "Passed first while" << std::endl;
 
-			while (end > start && isTrimable(expression[end]))
+			while (end > start && (trimable.find(expression[end]) != trimable.end()))
 				end--;
 
-			std::cout << "A" << std::endl;
-			Ensure(end - start > 0);
-			size_t length = end - start + 1;
-
-			std::cout << "Successfully trimmed" << std::endl;
-			return expression.substr(start, length);
+			expression.remove_suffix(expression.size() - end - 1);
+			expression.remove_prefix(start);
+			return expression;
 		}
 
 		bool isDigit(char c) {
 			return (c >= '0' && c <= '9');
 		}
 
-		bool ValidDataArgument(std::string_view untrimmedExpression) {
-			std::string_view expression = Trim(untrimmedExpression);
-			
+		bool ValidDataArgument(const std::string_view& expression) {
 			if (expression.size() < MIN_DATA_ARGUMENT_SIZE || expression.substr(0, 4) != "data") {
 				return false;
 			}
@@ -181,9 +139,14 @@ namespace NConcurrentArithmetics::NExpressionParser {
 			return true;
 		}
 
-		size_t FindArgumentEnd(std::string_view expression, size_t start, size_t end) {
+		size_t FindArgumentEnd(const std::string_view& expression, size_t start) {
+			if (start >= expression.size() || expression.size() == 0) {
+				return expression.npos;
+			}
+
 			int state = 0;
-			for (size_t i = start; i < end; i++) {
+			size_t i = start;
+			for (i; i < expression.size(); i++) {
 				if (expression[i] == '(') {
 					state++;
 				} else if (expression[i] == ')') {
@@ -196,7 +159,7 @@ namespace NConcurrentArithmetics::NExpressionParser {
 			}
 
 			Ensure(state == 0);
-			return end - 1;
+			return expression.size() - 1;
 		}
 
 	} // NConcurrentARithmetics::NExpressionParser::NPrivate

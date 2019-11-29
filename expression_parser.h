@@ -44,13 +44,11 @@ namespace NConcurrentArithmetics::NExpressionParser {
 
 		bool CorrectParenthesesSequence(const std::string& expression);
 
-		size_t FindClosingBracket(std::string_view expression, size_t startPosition);
+		std::string_view Trim(std::string_view& expression);
 
-		std::string_view Trim(std::string_view expression);
+		bool ValidDataArgument(const std::string_view& expression);
 
-		bool ValidDataArgument(std::string_view expression);
-
-		size_t FindArgumentEnd(std::string_view expression, size_t start, size_t end);
+		size_t FindArgumentEnd(const std::string_view& expression, size_t start);
 
 	} // NConcurrentARithmetics::NExpressionParser::NPrivate
 
