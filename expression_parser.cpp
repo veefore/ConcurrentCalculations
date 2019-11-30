@@ -17,7 +17,7 @@ namespace NConcurrentArithmetics::NExpressionParser {
 
 	size_t MIN_DATA_ARGUMENT_SIZE = 5;
 
-	TRawTree<std::string_view> Parse(const std::string& expression) {
+	NRawTree::TRawTree<std::string_view> Parse(const std::string& expression) {
 		Ensure(NPrivate::CorrectParenthesesSequence(expression));
 		NPrivate::TUnconvertedTreeBuilder builder(expression);
 		builder.Optimize();
