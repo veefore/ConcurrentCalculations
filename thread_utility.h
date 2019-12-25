@@ -17,7 +17,13 @@ namespace NThread {
 			Wait();
 		}
 
-		void Wait();
+		void Wait() {
+			for (auto& thread : Threads_) {
+				if (thread.joinable()) {
+					thread.join();
+				}
+			}
+		}
 
 	private:
 		std::vector<std::thread>& Threads_;
@@ -34,15 +40,13 @@ namespace NThread {
 
 		bool TryPop(T& value);
 
-		void Wait();
-
 	private:
 		mutable std::mutex Mutex_;
 		std::queue<T> Queue_;
-		std::condition_variable Condition_;
-		std::condition_variable QueueEmptyCondition_;
-	}	
+	};
 
 } // NThread
+
+#include "thread_utility_impl.h"
 
 #endif

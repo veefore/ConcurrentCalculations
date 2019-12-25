@@ -3,6 +3,7 @@
 
 #include "expression_parser.h"
 #include "exception.h"
+#include "task.h"
 
 #include <string>
 #include <vector>
@@ -15,7 +16,7 @@
 
 namespace NConcurrentArithmetics::NExpressionParser {
 
-	size_t MIN_DATA_ARGUMENT_SIZE = 5;
+	size_t MIN_DATA_ARGUMENT_SIZE = 5; // size("dataN") >= 5, N - index
 
 	NRawTree::TRawTree<std::string_view> Parse(const std::string& expression) {
 		Ensure(NPrivate::CorrectParenthesesSequence(expression));
@@ -54,7 +55,7 @@ namespace NConcurrentArithmetics::NExpressionParser {
 				}
 			}; // For each dependency change it to the last node with such an expression.
 			dfs(0);
-			// Now a traversal from root defines an optimized map with similar calculations merged into one
+			// Now a traversal from root defines an optimized tree with similar calculations merged into one
 			// that is the lowest in the tree.
 		}
 
@@ -160,6 +161,22 @@ namespace NConcurrentArithmetics::NExpressionParser {
 
 			Ensure(state == 0);
 			return expression.size() - 1;
+		}
+
+		size_t CountArguments(const std::string_view& args) {
+			// args is assumed to be in the form of "arg1, arg2, ..., argn".
+			size_t state = 0;
+			size_t count = 1; // Count == amount of ',' + 1;
+			for (size_t i = 0; i < args.size(); i++) {
+				if (args[i] == '(') {
+					state++;
+				} else if (args[i] == ')') {
+					state--;
+				} else if (args[i] == ',' && state == 0) {
+					count++;
+				}
+			}
+			return count;
 		}
 
 	} // NConcurrentARithmetics::NExpressionParser::NPrivate
