@@ -17,11 +17,11 @@ namespace NConcurrentArithmetics {
 	template <typename TData>
 	TData Calculate(const std::string& expression,
 					std::vector<TData> data,
-					const std::unordered_map<std::string, NTask::TOperation<TData>>& dictionary) {
+					const std::unordered_map<std::string, NTask::TOperation<TData>>& dictionary,
+					unsigned int threadCount) {
 		NRawTree::TRawTree<std::string_view> rawTree = NExpressionParser::Parse(expression);
 		NTask::TTaskTree<TData> tree(rawTree, std::move(data), dictionary);
-		NThread::TThreadPool pool(3);
-		cout << "pool.SubmitTree()" << endl;
+		NThread::TThreadPool pool(threadCount);
 		auto futureResult = pool.SubmitTree(tree);
 		return futureResult.get();
 	}

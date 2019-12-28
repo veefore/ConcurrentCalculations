@@ -42,7 +42,7 @@ namespace NThread {
 
 		TFunctionWrapper() = default;
 
-		TFunctionWrapper(TFunctionWrapper& other) : Impl_(std::move(other.Impl_)) {}
+		TFunctionWrapper(TFunctionWrapper&& other) : Impl_(std::move(other.Impl_)) {}
 
 		TFunctionWrapper& operator=(TFunctionWrapper&& other);
 
@@ -82,13 +82,9 @@ namespace NThread {
 	template <typename TFunc>
 	std::future<typename std::result_of<TFunc()>::type> TThreadPool::SubmitTask(TFunc function) {
 		using TResult = typename std::result_of<TFunc()>::type;
-		cout << "Creating packaged_task" << endl;
 		std::packaged_task<TResult()> task(std::move(function));
-		cout << "Creating result future" << endl;
 		std::future<TResult> result(task.get_future());
-		cout << "Pushing" << endl;
 		TaskQueue_.Push(std::move(task));
-		cout << "Push successful" << endl;
 		return result;
 	}
 
@@ -96,17 +92,18 @@ namespace NThread {
 	std::shared_future<TData> TThreadPool::SubmitTree(NTask::TTaskTree<TData>& tree) {
 		Ensure(tree.Tasks_.size() > 0);
 		Ensure(tree.Tasks_[0].size() > 0);
-		cout << "Getting root future." << endl;
 		std::shared_future<TData> resultFuture = tree.Tasks_[0][0]->SharedFuture();
 
-		cout << "Entering for loop." << endl;
-		for (size_t layer = tree.Tasks_.size() - 1; layer >= 0; layer--) {
-			cout << "Entering nested loop. Layer: " << layer << endl;
+		for (size_t layer = tree.Tasks_.size() - 1; layer != (size_t)-1; layer--) {
 			for (size_t index = 0; index < tree.Tasks_[layer].size(); index++) {
-				cout << "I'm in a nested loop." << endl;
 				auto& taskPtr = tree.Tasks_[layer][index];
-				cout << "Submitting task." << endl;
-				this->SubmitTask(std::move(*taskPtr.release()));	
+				NTask::TTask<TData>* castedTaskPtr = dynamic_cast<NTask::TTask<TData>*>(taskPtr.get());
+				if (castedTaskPtr) {
+					this->SubmitTask(std::move(*castedTaskPtr));	
+					taskPtr.release();
+				} else {
+					this->SubmitTask(std::move(*taskPtr.release()));	
+				}
 			}
 		}
 

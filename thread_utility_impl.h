@@ -1,10 +1,6 @@
 #ifndef __THREAD_UTILITY_IMPL__H__
 #define __THREAD_UTILITY_IMPL__H__
 
-// REMOVE
-#include <iostream>
-using namespace std;
-
 namespace NThread {
 	
 	template <typename T>
@@ -15,9 +11,7 @@ namespace NThread {
 
 	template <typename T>
 	void TThreadSafeQueue<T>::Push(T value) {
-		cout << "Locking mutex" << endl;
 		std::lock_guard<std::mutex> guard(Mutex_);
-		cout << "pushing" << endl;
 		Queue_.push(std::move(value));
 	}
 

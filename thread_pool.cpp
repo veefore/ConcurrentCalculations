@@ -10,9 +10,6 @@
 #include <future>
 #include <atomic>
 
-// REMOVE
-#include <iostream>
-using namespace std;
 namespace NThread {
 
 	TFunctionWrapper& TFunctionWrapper::operator=(TFunctionWrapper&& other) {
@@ -24,7 +21,6 @@ namespace NThread {
 		while (!Done_) {
 			TFunctionWrapper task;
 			if (TaskQueue_.TryPop(task)) {
-				cout << "TryPop() worked??????" << endl;
 				task();
 			} else {
 				std::this_thread::yield();

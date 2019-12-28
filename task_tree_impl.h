@@ -27,12 +27,12 @@
 		Tasks_[level].emplace_back(std::move(parser.ParseTask(rawTree.Nodes_[root])));
 		auto& task = Tasks_[level].back();
 		futures[root] = task->SharedFuture();
-
+		TTask<TData>* taskPtr = dynamic_cast<TTask<TData>*>(task.get());
+		
 		for (size_t subtree : rawTree.Edges_[root]) {
 			if (!visited[subtree]) {
 				BuildTree(subtree, level + 1, rawTree, futures, visited, parser);	
 			}
-			TTask<TData>* taskPtr = dynamic_cast<TTask<TData>*>(task.get());
 			if (taskPtr) {
 				taskPtr->Data_.push_back(futures[subtree]);
 			}
